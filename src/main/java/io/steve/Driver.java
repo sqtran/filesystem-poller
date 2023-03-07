@@ -1,6 +1,10 @@
 package io.steve;
 
-import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -8,6 +12,7 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.time.Duration;
 
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
@@ -22,7 +27,14 @@ public class Driver {
         Quarkus.run(MyApp.class);
     }
 
+
     public static class MyApp implements QuarkusApplication {
+
+        private final HttpClient httpClient = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_1_1)
+        .followRedirects(Redirect.ALWAYS)
+        .connectTimeout(Duration.ofSeconds(10))
+        .build();
 
         @Override
         public int run(String... args) throws Exception {
@@ -51,7 +63,24 @@ public class Driver {
                         }
                         // Returns the path (relative path) of the file or directory that triggered the event
                         Path fileName = (Path) event.context();
-                        System.out.println("file changed: " + fileName);
+
+
+                        if(!fileName.endsWith(".processing") && !fileName.endsWith(".done")){
+                            System.out.println("file changed: " + fileName);
+
+                            this.httpClient
+                                     .sendAsync(
+                                             HttpRequest.newBuilder()
+                                                     .POST(HttpRequest.BodyPublishers.noBody())
+                                                     .uri(URI.create("http://localhost:8080/file/" + fileName))
+                                                     .build()
+                                             ,
+                                             HttpResponse.BodyHandlers.ofString()
+                                     )
+                                     .thenApply(HttpResponse::body)
+                                     .thenApply(Long::parseLong)
+                                     .toCompletableFuture();
+                        }
                     }
                     // This method needs to be reset every time the take() or poll() method of WatchService is called
                     if (!key.reset()) {
