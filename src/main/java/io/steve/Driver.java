@@ -45,7 +45,7 @@ public class Driver {
             path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
 
 
-            WORKER_URL = System.getProperty("WORKER_URL", WORKER_URL);
+            WORKER_URL = System.getenv().get("WORKER_URL") != null ? System.getenv().get("WORKER_URL") : WORKER_URL;
 
             try {
                 while (true) {
@@ -72,6 +72,8 @@ public class Driver {
 
                         if(!fileName.endsWith(".processing") && !fileName.endsWith(".done")){
                             System.out.println("file changed: " + fileName);
+
+                            System.out.println("Posting to " + WORKER_URL + fileName);
 
                             this.httpClient
                                      .sendAsync(
