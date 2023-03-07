@@ -30,6 +30,8 @@ public class Driver {
 
     public static class MyApp implements QuarkusApplication {
 
+        private static String WORKER_URL = "http://localhost:8080/file/";
+
         private final HttpClient httpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_1_1)
         .followRedirects(Redirect.ALWAYS)
@@ -41,6 +43,9 @@ public class Driver {
             Path path = Paths.get("/var/tmp/");
             WatchService watcher = FileSystems.getDefault().newWatchService();
             path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+
+
+            WORKER_URL = System.getProperty("WORKER_URL", WORKER_URL);
 
             try {
                 while (true) {
@@ -72,7 +77,7 @@ public class Driver {
                                      .sendAsync(
                                              HttpRequest.newBuilder()
                                                      .POST(HttpRequest.BodyPublishers.noBody())
-                                                     .uri(URI.create("http://localhost:8080/file/" + fileName))
+                                                     .uri(URI.create(WORKER_URL + fileName))
                                                      .build()
                                              ,
                                              HttpResponse.BodyHandlers.ofString()
